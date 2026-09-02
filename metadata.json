@@ -1,0 +1,6 @@
+{
+  "name": "Anuman Home Health Care Centre",
+  "description": "Hospital-level professional medical care in the comfort of your home. 24x7 home nursing, elder care, and specialized medical procedures in Patna, Bihar.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
