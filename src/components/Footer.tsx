@@ -1,13 +1,15 @@
 import React from 'react';
-import { Phone, MapPin, MessageCircle, Navigation, ShieldCheck, Heart } from 'lucide-react';
+import { Phone, MapPin, MessageCircle, Navigation, ShieldCheck, Heart, Sparkles, Briefcase, Lock, UserPlus } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
 import { SERVICES_LIST } from '../data/servicesData';
 
 interface FooterProps {
   onOpenBooking: (serviceName?: string) => void;
+  onOpenCareers?: () => void;
+  onOpenAdminLogin?: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onOpenBooking }) => {
+export const Footer: React.FC<FooterProps> = ({ onOpenBooking, onOpenCareers, onOpenAdminLogin }) => {
   const quickLinks = [
     { name: 'Home', href: '#home' },
     { name: 'About Us', href: '#about' },
@@ -98,6 +100,17 @@ export const Footer: React.FC<FooterProps> = ({ onOpenBooking }) => {
                   </a>
                 </li>
               ))}
+              {onOpenCareers && (
+                <li>
+                  <button
+                    onClick={onOpenCareers}
+                    className="inline-flex items-center gap-1.5 text-teal-400 hover:text-teal-300 font-semibold transition-colors"
+                  >
+                    <Briefcase className="w-3.5 h-3.5" />
+                    <span>Careers / Work With Us</span>
+                  </button>
+                </li>
+              )}
             </ul>
           </div>
 
@@ -163,16 +176,79 @@ export const Footer: React.FC<FooterProps> = ({ onOpenBooking }) => {
 
         </div>
 
-        {/* Brand Slogan Ribbon */}
-        <div className="py-6 text-center text-sm font-semibold text-teal-400 border-b border-slate-800/80">
-          "Quality Care at Home • Your Health, Our Priority"
+        {/* Careers & Recruitment Banner in the bottom */}
+        {onOpenCareers && (
+          <div className="my-8 p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-teal-950/80 to-slate-900 border border-teal-800/40 shadow-xl flex flex-col md:flex-row items-center justify-between gap-5">
+            <div className="flex items-start gap-3.5">
+              <div className="w-12 h-12 rounded-xl bg-teal-800/40 border border-teal-500/30 text-teal-300 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Briefcase className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="text-base sm:text-lg font-bold text-white font-heading">
+                    Join Our Healthcare Team in Patna
+                  </h4>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                    We Are Hiring
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                  Are you a qualified Nurse (GNM / B.Sc), Patient Care Attendant (GDA), Physiotherapist, or Medical Technician? Join Patna’s premier home healthcare network with reliable daily/monthly compensation and clinical support.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={onOpenCareers}
+              id="footer-career-apply-btn"
+              className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg transition-all active:scale-95 flex-shrink-0 whitespace-nowrap"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>Apply for Healthcare Job (हमसे जुड़ें)</span>
+            </button>
+          </div>
+        )}
+
+        {/* Brand Slogan Ribbon & Design Credit */}
+        <div className="py-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-800/80 text-center sm:text-left">
+          <div className="text-sm font-semibold text-teal-400">
+            "Quality Care at Home • Your Health, Our Priority"
+          </div>
+
+          <div
+            id="designer-credit-badge"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border border-slate-700/80 text-xs text-slate-300 shadow-2xs"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-teal-400" />
+            <span>Designed by <strong className="text-teal-400 font-semibold">Meer Sohail Hussain</strong></span>
+          </div>
         </div>
 
-        {/* Bottom Medical Disclaimer & Copyright */}
+        {/* Bottom Medical Disclaimer, Copyright & Discreet Staff Access */}
         <div className="pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400 text-center md:text-left">
-          <p>
-            © {new Date().getFullYear()} Anuman Home Health Care Centre. All rights reserved.
-          </p>
+          <div>
+            <div className="flex items-center justify-center md:justify-start gap-1.5">
+              <p>
+                © {new Date().getFullYear()} Anuman Home Health Care Centre. All rights reserved.
+              </p>
+              {/* Discreet, subtle internal access trigger - hidden from normal visitors */}
+              {onOpenAdminLogin && (
+                <button
+                  onClick={onOpenAdminLogin}
+                  id="discreet-internal-trigger"
+                  className="text-slate-800 hover:text-slate-500 transition-colors p-1 opacity-25 hover:opacity-90 rounded focus:outline-none"
+                  title="System"
+                  aria-label="Staff Access"
+                >
+                  <Lock className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+            <p className="mt-1 text-slate-400 text-[11px]">
+              Designed by <strong className="text-teal-400 font-semibold">Meer Sohail Hussain</strong>
+            </p>
+          </div>
+
           <p className="max-w-xl text-[11px] leading-relaxed text-slate-400">
             <strong>Medical Disclaimer:</strong> Healthcare services are provided according to individual patient requirements and professional medical assessment. For sudden life-threatening emergencies, please arrange immediate hospital transport.
           </p>

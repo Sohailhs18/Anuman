@@ -1,0 +1,21 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /appointments/{appointmentId} {
+      // Public clients can submit in-home care booking inquiries
+      allow create: if request.resource.data.name is string && request.resource.data.phone is string;
+      
+      // CRITICAL: Public clients cannot view, list, read, update, or delete any inquiries.
+      // Only authenticated admin staff can view and manage inquiries.
+      allow read, update, delete: if request.auth != null;
+    }
+
+    match /careerApplications/{applicationId} {
+      // Public nurses/attendants can submit job applications
+      allow create: if request.resource.data.name is string && request.resource.data.phone is string;
+      
+      // Only authenticated admin staff can view and manage career applications
+      allow read, update, delete: if request.auth != null;
+    }
+  }
+}

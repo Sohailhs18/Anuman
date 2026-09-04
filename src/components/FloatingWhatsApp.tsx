@@ -7,7 +7,7 @@ export const FloatingWhatsApp: React.FC = () => {
   );
 
   return (
-    <aside aria-label="Quick WhatsApp assistance" className="fixed bottom-20 md:bottom-8 right-5 z-40">
+    <aside aria-label="Quick WhatsApp assistance" className="hidden md:block fixed bottom-8 right-5 z-40">
       <a
         href={`https://wa.me/917463091878?text=${message}`}
         target="_blank"

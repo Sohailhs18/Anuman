@@ -71,7 +71,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({ className = '', variant = 
           </span>
 
           <span
-            className={`text-[9.5px] font-medium tracking-tight ${
+            className={`hidden sm:block text-[9.5px] font-medium tracking-tight ${
               isWhite ? 'text-slate-400' : 'text-slate-500'
             }`}
           >

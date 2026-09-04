@@ -3,13 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { TrustStats } from './components/TrustStats';
 import { AboutSection } from './components/AboutSection';
 import { ServicesSection } from './components/ServicesSection';
-import { SpecializedServicesSection } from './components/SpecializedServicesSection';
 import { CarePlanAdvisor } from './components/CarePlanAdvisor';
 import { EquipmentAndLabSection } from './components/EquipmentAndLabSection';
 import { PatnaCoverageGuide } from './components/PatnaCoverageGuide';
@@ -23,60 +22,115 @@ import { Footer } from './components/Footer';
 import { FloatingWhatsApp } from './components/FloatingWhatsApp';
 import { MobileActionBar } from './components/MobileActionBar';
 import { BookingModal } from './components/BookingModal';
-import { ActiveInquiriesDrawer, CareInquiry } from './components/ActiveInquiriesDrawer';
+import { AdminLoginModal } from './components/AdminLoginModal';
+import { AdminDashboard } from './components/AdminDashboard';
+import { CareersModal } from './components/CareersModal';
 import { ServiceItem } from './data/servicesData';
+import { CareInquiry } from './types/appointment';
+import {
+  getStoredAppointments,
+  addAppointment,
+  isAdminAuthenticated,
+  logoutAdmin,
+} from './services/appointmentsStorage';
 
 export default function App() {
   const [selectedService, setSelectedService] = useState<ServiceItem | null>(null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [isCareersModalOpen, setIsCareersModalOpen] = useState(false);
   const [prefilledServiceName, setPrefilledServiceName] = useState('');
-  const [isInquiriesDrawerOpen, setIsInquiriesDrawerOpen] = useState(false);
+
+  // Admin Portal States
+  const [isAdmin, setIsAdmin] = useState<boolean>(() => isAdminAuthenticated());
+  const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
+  const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false);
 
   const [inquiries, setInquiries] = useState<CareInquiry[]>(() => {
-    try {
-      const saved = localStorage.getItem('anuman_care_inquiries');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
+    return getStoredAppointments();
   });
 
-  const handleInquiryCreated = (inquiry: CareInquiry) => {
-    setInquiries((prev) => {
-      const next = [inquiry, ...prev];
-      try {
-        localStorage.setItem('anuman_care_inquiries', JSON.stringify(next));
-      } catch {
-        // Fallback for private browsing storage restrictions
-      }
-      return next;
-    });
-  };
+  // Keep state in sync with local storage changes (or across tabs)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setInquiries(getStoredAppointments());
+      setIsAdmin(isAdminAuthenticated());
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
-  const handleRemoveInquiry = (id: string) => {
-    setInquiries((prev) => {
-      const next = prev.filter((i) => i.id !== id);
-      try {
-        localStorage.setItem('anuman_care_inquiries', JSON.stringify(next));
-      } catch {
-        // Fallback
+  // Secret staff shortcut (Ctrl+Shift+A / Alt+Shift+A) & #admin URL hash listener
+  useEffect(() => {
+    const checkHashOrUrl = () => {
+      if (window.location.hash === '#admin' || window.location.search.includes('admin=')) {
+        if (isAdminAuthenticated()) {
+          setIsAdminDashboardOpen(true);
+        } else {
+          setIsAdminLoginOpen(true);
+        }
       }
-      return next;
-    });
-  };
+    };
+    checkHashOrUrl();
 
-  const handleClearInquiries = () => {
-    setInquiries([]);
-    try {
-      localStorage.removeItem('anuman_care_inquiries');
-    } catch {
-      // Fallback
-    }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey || e.altKey) && e.shiftKey && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        if (isAdminAuthenticated()) {
+          setIsAdminDashboardOpen(true);
+        } else {
+          setIsAdminLoginOpen(true);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('hashchange', checkHashOrUrl);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('hashchange', checkHashOrUrl);
+    };
+  }, []);
+
+  const handleInquiryCreated = async (inquiry: CareInquiry) => {
+    const created = await addAppointment({
+      id: inquiry.id,
+      name: inquiry.name,
+      phone: inquiry.phone,
+      service: inquiry.service,
+      preferredDate: inquiry.preferredDate,
+      preferredTime: inquiry.preferredTime,
+      address: inquiry.address,
+      notes: inquiry.notes,
+      status: inquiry.status || 'In Review',
+      source: 'Booking Modal',
+    });
+
+    setInquiries((prev) => [created, ...prev.filter((item) => item.id !== created.id)]);
   };
 
   const handleOpenBooking = (serviceName?: string) => {
     setPrefilledServiceName(serviceName || '');
     setIsBookingModalOpen(true);
+  };
+
+  const handleOpenAdmin = () => {
+    if (isAdmin) {
+      setIsAdminDashboardOpen(true);
+    } else {
+      setIsAdminLoginOpen(true);
+    }
+  };
+
+  const handleAdminLoginSuccess = () => {
+    setIsAdmin(true);
+    setIsAdminLoginOpen(false);
+    setIsAdminDashboardOpen(true);
+  };
+
+  const handleAdminLogout = () => {
+    logoutAdmin();
+    setIsAdmin(false);
+    setIsAdminDashboardOpen(false);
   };
 
   const handleSelectService = (service: ServiceItem) => {
@@ -97,8 +151,10 @@ export default function App() {
       {/* Top Navbar */}
       <Navbar
         onOpenBooking={() => handleOpenBooking()}
-        onOpenInquiries={() => setIsInquiriesDrawerOpen(true)}
+        onOpenInquiries={() => setIsAdminDashboardOpen(true)}
         inquiriesCount={inquiries.length}
+        onOpenAdminLogin={handleOpenAdmin}
+        isAdmin={isAdmin}
       />
 
       {/* Main Content Sections */}
@@ -112,19 +168,13 @@ export default function App() {
         {/* 3. Dedicated About & Clinical Leadership Section */}
         <AboutSection onOpenBooking={() => handleOpenBooking()} />
 
-        {/* 4. Complete Services Catalog (General & Specialized) */}
+        {/* 4. Complete Services Catalog (General & Specialized with Instant Filtering) */}
         <ServicesSection
           onSelectService={handleSelectService}
           onOpenBooking={handleOpenBooking}
         />
 
-        {/* 5. Sterile Clinical Procedures & Registered Nursing (Specialized column from poster) */}
-        <SpecializedServicesSection
-          onSelectService={handleSelectService}
-          onOpenBooking={handleOpenBooking}
-        />
-
-        {/* 6. Interactive Care Plan Advisor */}
+        {/* 5. Interactive Care Plan Advisor */}
         <CarePlanAdvisor onOpenBooking={handleOpenBooking} />
 
         {/* 7. Rental Medical Equipment & Free Home Lab Collection */}
@@ -152,8 +202,12 @@ export default function App() {
         />
       </main>
 
-      {/* 14. Comprehensive Footer */}
-      <Footer onOpenBooking={handleOpenBooking} />
+      {/* 14. Comprehensive Footer with Careers, Designer Credit & Discreet Staff Trigger */}
+      <Footer
+        onOpenBooking={handleOpenBooking}
+        onOpenCareers={() => setIsCareersModalOpen(true)}
+        onOpenAdminLogin={handleOpenAdmin}
+      />
 
       {/* Service Detail Modal */}
       <ServiceDetailModal
@@ -170,14 +224,50 @@ export default function App() {
         onInquiryCreated={handleInquiryCreated}
       />
 
-      {/* Active Care Inquiries Drawer */}
-      <ActiveInquiriesDrawer
-        isOpen={isInquiriesDrawerOpen}
-        onClose={() => setIsInquiriesDrawerOpen(false)}
-        inquiries={inquiries}
-        onClearInquiries={handleClearInquiries}
-        onRemoveInquiry={handleRemoveInquiry}
+      {/* Careers / Job Application Modal */}
+      <CareersModal
+        isOpen={isCareersModalOpen}
+        onClose={() => setIsCareersModalOpen(false)}
       />
+
+      {/* Staff / Admin Login Modal */}
+      <AdminLoginModal
+        isOpen={isAdminLoginOpen}
+        onClose={() => setIsAdminLoginOpen(false)}
+        onLoginSuccess={handleAdminLoginSuccess}
+      />
+
+      {/* Staff / Admin Full-Screen Operations Desk */}
+      <AdminDashboard
+        isOpen={isAdminDashboardOpen}
+        onClose={() => setIsAdminDashboardOpen(false)}
+        onLogout={handleAdminLogout}
+      />
+
+      {/* Discreet floating staff desk pill when logged in and browsing public website */}
+      {isAdmin && !isAdminDashboardOpen && (
+        <div className="fixed bottom-16 sm:bottom-6 left-3 sm:left-4 z-40 bg-slate-950/95 text-white border border-teal-500/40 rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 shadow-2xl flex items-center gap-2.5 sm:gap-3 backdrop-blur-md animate-in slide-in-from-bottom-4 max-w-[calc(100vw-24px)]">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-[11px] sm:text-xs font-bold text-teal-300 whitespace-nowrap">Staff Active</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setIsAdminDashboardOpen(true)}
+              className="px-2.5 py-1 bg-teal-700 hover:bg-teal-600 text-white rounded-lg text-[11px] sm:text-xs font-bold transition-all shadow-xs whitespace-nowrap"
+            >
+              Operations Desk
+            </button>
+            <button
+              onClick={handleAdminLogout}
+              className="text-[11px] sm:text-xs text-slate-400 hover:text-red-400 transition-colors px-1 whitespace-nowrap"
+              title="Sign Out"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Persistent Floating WhatsApp Help Button (Desktop & Tablet) */}
       <FloatingWhatsApp />

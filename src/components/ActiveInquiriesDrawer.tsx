@@ -1,17 +1,7 @@
 import React from 'react';
 import { X, CheckCircle, Clock, Phone, MessageCircle, AlertCircle, FileText, Trash2 } from 'lucide-react';
-
-export interface CareInquiry {
-  id: string;
-  timestamp: string;
-  name: string;
-  phone: string;
-  service: string;
-  preferredDate?: string;
-  preferredTime?: string;
-  address?: string;
-  status: 'In Review' | 'Coordinator Assigned' | 'Completed';
-}
+import { CustomerAppointment, CareInquiry } from '../types/appointment';
+export type { CareInquiry };
 
 interface ActiveInquiriesDrawerProps {
   isOpen: boolean;

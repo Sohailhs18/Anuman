@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Phone, MessageCircle, Menu, X, Clock, MapPin, FileText, Bell } from 'lucide-react';
+import { Phone, MessageCircle, Menu, X, Clock, MapPin, FileText, Bell, ShieldCheck, Lock } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
 
 interface NavbarProps {
   onOpenBooking: (serviceName?: string) => void;
   onOpenInquiries?: () => void;
   inquiriesCount?: number;
+  onOpenAdminLogin?: () => void;
+  isAdmin?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   onOpenBooking,
   onOpenInquiries,
   inquiriesCount = 0,
+  onOpenAdminLogin,
+  isAdmin = false,
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -29,14 +33,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, []);
 
   const navLinks = [
-    { name: 'Home', href: '#home' },
-    { name: 'About', href: '#about' },
-    { name: 'General Services', href: '#services' },
-    { name: 'Specialized Procedures', href: '#specialized-services' },
+    { name: 'Clinical Services', href: '#services' },
     { name: 'Care Advisor', href: '#care-advisor' },
     { name: 'Equipment & Lab', href: '#equipment-lab' },
     { name: 'Patna Coverage', href: '#patna-coverage' },
-    { name: 'Why Us', href: '#why-us' },
+    { name: 'Why Anuman', href: '#about' },
     { name: 'Contact', href: '#contact' },
   ];
 
@@ -51,10 +52,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
-      {/* Top Emergency & Clinical Bar */}
+      {/* Top Emergency & Clinical Bar (Desktop & Tablet) */}
       <div
         className={`bg-slate-950 text-slate-200 text-xs py-1.5 px-4 transition-all duration-300 border-b border-slate-800 ${
-          isScrolled ? 'hidden md:hidden' : 'block'
+          isScrolled ? 'hidden' : 'hidden sm:block'
         }`}
       >
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
@@ -70,14 +71,15 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            {inquiriesCount > 0 && onOpenInquiries && (
+          <div className="flex items-center gap-3 sm:gap-4">
+            {/* Inquiries only accessible to authorized admin staff */}
+            {isAdmin && inquiriesCount > 0 && onOpenInquiries && (
               <button
                 onClick={onOpenInquiries}
                 className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-teal-800/80 text-teal-200 text-[11px] font-bold hover:bg-teal-700 transition-colors"
               >
                 <FileText className="w-3 h-3 text-teal-300" />
-                <span>My Inquiries ({inquiriesCount})</span>
+                <span>Client Inquiries ({inquiriesCount})</span>
               </button>
             )}
 
@@ -125,13 +127,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           </a>
 
           {/* Desktop Navigation Links */}
-          <div className="hidden xl:flex items-center space-x-1">
+          <div className="hidden lg:flex items-center space-x-1">
             {navLinks.map((link) => (
               <a
                 key={link.name}
                 href={link.href}
                 onClick={(e) => handleLinkClick(e, link.href)}
-                className="text-slate-700 hover:text-teal-800 font-semibold text-xs py-1.5 px-2.5 rounded-lg transition-colors hover:bg-teal-50"
+                className="text-slate-600 hover:text-teal-800 font-semibold text-xs sm:text-sm py-1.5 px-3 rounded-lg transition-colors hover:bg-teal-50/80"
               >
                 {link.name}
               </a>
@@ -168,15 +170,27 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <span>Book Home Care</span>
             </button>
+
+            {/* If currently logged in as admin, show discreet indicator to return to desk */}
+            {isAdmin && onOpenAdminLogin && (
+              <button
+                onClick={onOpenAdminLogin}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-amber-50 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold hover:bg-amber-100 transition-all shadow-2xs"
+                title="Return to Operations Desk"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-700" />
+                <span className="hidden md:inline">Operations Desk</span>
+              </button>
+            )}
           </div>
 
-          {/* Mobile Hamburger & Inquiries Icon */}
-          <div className="flex xl:hidden items-center gap-2">
-            {inquiriesCount > 0 && onOpenInquiries && (
+          {/* Mobile Hamburger & Admin Inquiries Icon */}
+          <div className="flex lg:hidden items-center gap-2">
+            {isAdmin && inquiriesCount > 0 && onOpenInquiries && (
               <button
                 onClick={onOpenInquiries}
                 className="p-2 rounded-lg bg-teal-100 text-teal-900 relative"
-                aria-label="View Inquiries"
+                aria-label="View Inquiries (Admin)"
               >
                 <FileText className="w-4 h-4" />
                 <span className="absolute -top-1 -right-1 w-4 h-4 bg-teal-700 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
@@ -206,7 +220,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
-        <div className="xl:hidden bg-white border-b border-slate-200 shadow-2xl px-4 pt-3 pb-6 max-h-[80vh] overflow-y-auto animate-in slide-in-from-top duration-200">
+        <div className="lg:hidden bg-white border-b border-slate-200 shadow-2xl px-4 pt-3 pb-6 max-h-[80vh] overflow-y-auto animate-in slide-in-from-top duration-200">
           <div className="flex flex-col space-y-1 mb-4">
             {navLinks.map((link) => (
               <a
@@ -250,6 +264,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>WhatsApp</span>
               </a>
             </div>
+
+            {isAdmin && onOpenAdminLogin && (
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenAdminLogin();
+                }}
+                className="w-full inline-flex items-center justify-center gap-2 py-2 px-3 bg-amber-500/20 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold transition-colors"
+              >
+                <ShieldCheck className="w-4 h-4 text-amber-700" />
+                <span>Return to Operations Desk (Active)</span>
+              </button>
+            )}
           </div>
         </div>
       )}
