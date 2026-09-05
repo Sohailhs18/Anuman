@@ -7,9 +7,10 @@ interface FooterProps {
   onOpenBooking: (serviceName?: string) => void;
   onOpenCareers?: () => void;
   onOpenAdminLogin?: () => void;
+  isAdmin?: boolean;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onOpenBooking, onOpenCareers, onOpenAdminLogin }) => {
+export const Footer: React.FC<FooterProps> = ({ onOpenBooking, onOpenCareers, onOpenAdminLogin, isAdmin = false }) => {
   const quickLinks = [
     { name: 'Home', href: '#home' },
     { name: 'About Us', href: '#about' },
@@ -108,6 +109,17 @@ export const Footer: React.FC<FooterProps> = ({ onOpenBooking, onOpenCareers, on
                   >
                     <Briefcase className="w-3.5 h-3.5" />
                     <span>Careers / Work With Us</span>
+                  </button>
+                </li>
+              )}
+              {onOpenAdminLogin && (
+                <li>
+                  <button
+                    onClick={onOpenAdminLogin}
+                    className="inline-flex items-center gap-1.5 text-amber-400 hover:text-amber-300 font-semibold transition-colors"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>{isAdmin ? 'Operations Desk (Active)' : 'Admin & Staff Portal'}</span>
                   </button>
                 </li>
               )}
@@ -224,29 +236,31 @@ export const Footer: React.FC<FooterProps> = ({ onOpenBooking, onOpenCareers, on
           </div>
         </div>
 
-        {/* Bottom Medical Disclaimer, Copyright & Discreet Staff Access */}
+        {/* Bottom Medical Disclaimer, Copyright & Clear Staff Access */}
         <div className="pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400 text-center md:text-left">
-          <div>
-            <div className="flex items-center justify-center md:justify-start gap-1.5">
-              <p>
-                © {new Date().getFullYear()} Anuman Home Health Care Centre. All rights reserved.
-              </p>
-              {/* Discreet, subtle internal access trigger - hidden from normal visitors */}
+          <div className="space-y-1.5">
+            <p>
+              © {new Date().getFullYear()} Anuman Home Health Care Centre. All rights reserved.
+            </p>
+            <div className="flex items-center justify-center md:justify-start gap-3 text-[11px]">
+              <span className="text-slate-400">
+                Designed by <strong className="text-teal-400 font-semibold">Meer Sohail Hussain</strong>
+              </span>
               {onOpenAdminLogin && (
-                <button
-                  onClick={onOpenAdminLogin}
-                  id="discreet-internal-trigger"
-                  className="text-slate-800 hover:text-slate-500 transition-colors p-1 opacity-25 hover:opacity-90 rounded focus:outline-none"
-                  title="System"
-                  aria-label="Staff Access"
-                >
-                  <Lock className="w-3 h-3" />
-                </button>
+                <>
+                  <span className="text-slate-700">•</span>
+                  <button
+                    onClick={onOpenAdminLogin}
+                    id="footer-admin-btn"
+                    className="inline-flex items-center gap-1 text-slate-400 hover:text-teal-300 font-medium transition-colors"
+                    title="Staff & Care Coordinator Portal"
+                  >
+                    <Lock className="w-3 h-3 text-teal-400" />
+                    <span>{isAdmin ? 'Operations Desk (Active)' : 'Staff / Admin Portal'}</span>
+                  </button>
+                </>
               )}
             </div>
-            <p className="mt-1 text-slate-400 text-[11px]">
-              Designed by <strong className="text-teal-400 font-semibold">Meer Sohail Hussain</strong>
-            </p>
           </div>
 
           <p className="max-w-xl text-[11px] leading-relaxed text-slate-400">

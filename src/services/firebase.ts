@@ -418,18 +418,36 @@ export function subscribeToAppointments(
   }
 }
 
+export interface FirestoreSyncResult {
+  success: boolean;
+  error?: string;
+  code?: string;
+}
+
 /**
  * Save or sync an appointment to Firestore
  */
-export async function syncAppointmentToFirestore(appointment: CustomerAppointment): Promise<boolean> {
-  if (!db) return false;
+export async function syncAppointmentToFirestore(
+  appointment: CustomerAppointment
+): Promise<FirestoreSyncResult> {
+  if (!db) {
+    return { success: false, error: 'Firestore is not initialized.' };
+  }
   try {
     const aptRef = doc(db, 'appointments', appointment.id);
     await setDoc(aptRef, appointment, { merge: true });
-    return true;
-  } catch (err) {
+    return { success: true };
+  } catch (err: any) {
+    const errMsg = err?.message || String(err);
+    const code = err?.code;
     console.warn('[Firebase] Could not save appointment to Firestore:', err);
-    return false;
+    let readable = errMsg;
+    if (code === 'permission-denied' || errMsg.includes('Missing or insufficient permissions')) {
+      readable = 'Permission Denied: Firebase Security Rules blocked writing to "appointments". In Firebase Console > Firestore > Rules, allow read & write access.';
+    } else if (code === 'not-found' || errMsg.includes('does not exist')) {
+      readable = 'Database Not Found: In Firebase Console, create the Firestore Database.';
+    }
+    return { success: false, error: readable, code };
   }
 }
 
@@ -502,15 +520,25 @@ export function subscribeToCareerApplications(
 /**
  * Save or sync a career application to Firestore
  */
-export async function syncCareerApplicationToFirestore(career: CareerApplication): Promise<boolean> {
-  if (!db) return false;
+export async function syncCareerApplicationToFirestore(
+  career: CareerApplication
+): Promise<FirestoreSyncResult> {
+  if (!db) {
+    return { success: false, error: 'Firestore is not initialized.' };
+  }
   try {
     const careerRef = doc(db, 'careerApplications', career.id);
     await setDoc(careerRef, career, { merge: true });
-    return true;
-  } catch (err) {
+    return { success: true };
+  } catch (err: any) {
+    const errMsg = err?.message || String(err);
+    const code = err?.code;
     console.warn('[Firebase] Could not save career application to Firestore:', err);
-    return false;
+    let readable = errMsg;
+    if (code === 'permission-denied' || errMsg.includes('Missing or insufficient permissions')) {
+      readable = 'Permission Denied: Firebase Security Rules blocked writing to "careerApplications". In Firebase Console > Firestore > Rules, allow read & write access.';
+    }
+    return { success: false, error: readable, code };
   }
 }
 
@@ -553,21 +581,30 @@ export async function deleteCareerApplicationFromFirestore(id: string): Promise<
 export async function syncAllLocalToFirebase(
   appointments: CustomerAppointment[],
   careers: CareerApplication[]
-): Promise<{ appointmentsCount: number; careersCount: number }> {
+): Promise<{ appointmentsCount: number; careersCount: number; lastError?: string }> {
   if (!db) throw new Error('Firebase Firestore is not initialized.');
 
   let aptsCount = 0;
   let carCount = 0;
+  let lastError: string | undefined = undefined;
 
   for (const apt of appointments) {
-    const success = await syncAppointmentToFirestore(apt);
-    if (success) aptsCount++;
+    const res = await syncAppointmentToFirestore(apt);
+    if (res.success) {
+      aptsCount++;
+    } else if (!lastError && res.error) {
+      lastError = res.error;
+    }
   }
 
   for (const car of careers) {
-    const success = await syncCareerApplicationToFirestore(car);
-    if (success) carCount++;
+    const res = await syncCareerApplicationToFirestore(car);
+    if (res.success) {
+      carCount++;
+    } else if (!lastError && res.error) {
+      lastError = res.error;
+    }
   }
 
-  return { appointmentsCount: aptsCount, careersCount: carCount };
+  return { appointmentsCount: aptsCount, careersCount: carCount, lastError };
 }

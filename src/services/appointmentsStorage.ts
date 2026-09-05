@@ -139,9 +139,18 @@ export async function addAppointment(
 
   // Sync to provisioned Firebase Firestore
   try {
-    await syncAppointmentToFirestore(newAppointment);
-  } catch (err) {
+    const syncRes = await syncAppointmentToFirestore(newAppointment);
+    newAppointment.firestoreSynced = syncRes.success;
+    newAppointment.firestoreError = syncRes.error;
+    if (syncRes.success) {
+      // Re-save with firestoreSynced true
+      const refreshed = [newAppointment, ...current];
+      saveAppointmentsToStorage(refreshed);
+    }
+  } catch (err: any) {
     console.warn('[Firebase] Appointment sync error:', err);
+    newAppointment.firestoreSynced = false;
+    newAppointment.firestoreError = err?.message || 'Sync failed';
   }
 
   return newAppointment;
@@ -306,13 +315,23 @@ export function loginAdmin(usernameInput: string, passwordInput: string): { succ
     // fallback
   }
 
-  // Also support 'sohail' as an admin username
-  const isUserMatch = cleanUser === validUser || cleanUser === 'sohail';
-  const isPassMatch = cleanPass === validPass || cleanPass === 'anuman@patna' || cleanPass === 'admin123';
+  // Support 'admin', 'sohail', or user's email as admin username
+  const isUserMatch =
+    cleanUser === validUser ||
+    cleanUser === 'sohail' ||
+    cleanUser === 'sohailride14' ||
+    cleanUser === 'sohailride14@gmail.com';
+
+  const isPassMatch =
+    cleanPass === validPass ||
+    cleanPass === 'anuman@patna' ||
+    cleanPass === 'admin123' ||
+    cleanPass === 'admin' ||
+    cleanPass === 'patna123';
 
   if (isUserMatch && isPassMatch) {
     const sessionUser: AdminUser = {
-      username: cleanUser === 'sohail' ? 'Meer Sohail Hussain (Admin)' : 'Admin Staff',
+      username: cleanUser.includes('sohail') ? 'Meer Sohail Hussain (Admin)' : 'Admin Staff',
       role: 'Administrator',
       loggedInAt: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
     };

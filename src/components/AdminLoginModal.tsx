@@ -154,20 +154,22 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
             </div>
 
             {/* Quick Demo Credentials Assistant */}
-            <div className="p-3 bg-teal-50/80 rounded-xl border border-teal-200/80 flex items-center justify-between text-xs">
-              <div className="text-teal-900">
-                <p className="font-bold">Default Credentials:</p>
-                <p className="text-[11px] text-teal-700 font-mono">
-                  admin / anuman@patna
+            <div className="p-3 bg-teal-50/90 rounded-xl border border-teal-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+              <div className="text-teal-950">
+                <p className="font-bold">Staff Access Credentials:</p>
+                <p className="text-[11px] text-teal-800 font-mono mt-0.5">
+                  Username: <strong className="text-teal-950">admin</strong> (or <strong className="text-teal-950">sohail</strong>)
+                  <br />
+                  Password: <strong className="text-teal-950">anuman@patna</strong>
                 </p>
               </div>
               <button
                 type="button"
                 onClick={handleQuickFillDemo}
-                className="inline-flex items-center gap-1 px-2.5 py-1 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-[11px] font-bold transition-colors"
+                className="self-start sm:self-center inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs"
               >
-                <KeyRound className="w-3 h-3" />
-                <span>Auto-Fill</span>
+                <KeyRound className="w-3.5 h-3.5" />
+                <span>1-Click Auto-Fill</span>
               </button>
             </div>
 

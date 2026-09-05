@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { X, Send, MessageCircle, Phone, CheckCircle2, AlertCircle, Calendar, FileText } from 'lucide-react';
 import { SERVICES_LIST } from '../data/servicesData';
-import { CareInquiry } from './ActiveInquiriesDrawer';
+import { CustomerAppointment, CareInquiry } from '../types/appointment';
 
 interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
   prefilledService?: string;
-  onInquiryCreated?: (inquiry: CareInquiry) => void;
+  onInquiryCreated?: (inquiry: CareInquiry) => Promise<CustomerAppointment | void> | void;
 }
 
 export const BookingModal: React.FC<BookingModalProps> = ({
@@ -28,6 +28,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   const [submittedInquiry, setSubmittedInquiry] = useState<CareInquiry | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (prefilledService) {
@@ -51,7 +52,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) {
       setErrorMsg('Please enter the patient or family contact name.');
@@ -63,6 +64,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       return;
     }
 
+    setIsSubmitting(true);
     const randomNum = Math.floor(1000 + Math.random() * 9000);
     const newInquiry: CareInquiry = {
       id: `ANM-PATNA-${randomNum}`,
@@ -81,11 +83,22 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       status: 'In Review',
     };
 
-    setSubmittedInquiry(newInquiry);
-    setErrorMsg('');
     if (onInquiryCreated) {
-      onInquiryCreated(newInquiry);
+      try {
+        const saved = await onInquiryCreated(newInquiry);
+        if (saved) {
+          newInquiry.firestoreSynced = saved.firestoreSynced;
+          newInquiry.firestoreError = saved.firestoreError;
+        }
+      } catch (err: any) {
+        newInquiry.firestoreSynced = false;
+        newInquiry.firestoreError = err?.message;
+      }
     }
+
+    setSubmittedInquiry(newInquiry);
+    setIsSubmitting(false);
+    setErrorMsg('');
   };
 
   const handleWhatsAppSend = () => {
@@ -167,6 +180,26 @@ Location in Patna: ${formData.address || 'Patna'}`;
                   <p>
                     <strong>Location:</strong> {submittedInquiry.address}
                   </p>
+                )}
+              </div>
+
+              {/* Firestore Cloud Status Banner */}
+              <div className="max-w-sm mx-auto">
+                {submittedInquiry.firestoreSynced ? (
+                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center justify-center gap-1.5 font-medium shadow-2xs">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Stored in Cloud Firestore (anuman-92cce)</span>
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 text-left space-y-1">
+                    <div className="flex items-center gap-1.5 font-bold text-amber-950">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>Logged Locally (Firebase Rules Blocked Cloud Write)</span>
+                    </div>
+                    <p className="text-[11px] text-amber-800 leading-relaxed">
+                      Your database is connected, but Google rejected the cloud write because <strong>Security Rules</strong> are set to private. To see this record in your Firebase Console, open the Rules tab in Firebase and allow read/write.
+                    </p>
+                  </div>
                 )}
               </div>
 
@@ -311,10 +344,11 @@ Location in Patna: ${formData.address || 'Patna'}`;
                 <button
                   type="submit"
                   id="modal-submit-booking"
-                  className="w-full py-3 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all active:scale-98 flex items-center justify-center gap-2"
+                  disabled={isSubmitting}
+                  className="w-full py-3 bg-teal-700 hover:bg-teal-800 disabled:bg-teal-900 disabled:opacity-60 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all active:scale-98 flex items-center justify-center gap-2"
                 >
-                  <Send className="w-4 h-4" />
-                  <span>Confirm & Request Callback</span>
+                  <Send className={`w-4 h-4 ${isSubmitting ? 'animate-spin' : ''}`} />
+                  <span>{isSubmitting ? 'Saving & Logging Request...' : 'Confirm & Request Callback'}</span>
                 </button>
 
                 <div className="flex items-center gap-2">

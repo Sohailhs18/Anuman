@@ -19,6 +19,8 @@ export interface CustomerAppointment {
   staffNotes?: string;
   status: AppointmentStatus;
   source?: 'Booking Modal' | 'Contact Form' | 'Equipment Request' | 'Manual Desk Entry';
+  firestoreSynced?: boolean;
+  firestoreError?: string;
 }
 
 // Backwards compatibility alias with existing components

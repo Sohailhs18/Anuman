@@ -202,11 +202,12 @@ export default function App() {
         />
       </main>
 
-      {/* 14. Comprehensive Footer with Careers, Designer Credit & Discreet Staff Trigger */}
+      {/* 14. Comprehensive Footer with Careers, Designer Credit & Staff Portal */}
       <Footer
         onOpenBooking={handleOpenBooking}
         onOpenCareers={() => setIsCareersModalOpen(true)}
         onOpenAdminLogin={handleOpenAdmin}
+        isAdmin={isAdmin}
       />
 
       {/* Service Detail Modal */}

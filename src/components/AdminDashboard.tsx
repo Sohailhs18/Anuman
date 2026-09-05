@@ -30,6 +30,8 @@ import {
   ChevronRight,
   Send,
   KeyRound,
+  Copy,
+  Check,
 } from 'lucide-react';
 import {
   CustomerAppointment,
@@ -65,6 +67,7 @@ import {
   resetToDefaultFirebaseAccount,
   testFirestoreConnection,
   writeSampleTestAppointment,
+  syncAppointmentToFirestore,
   parseFirebaseConfigString,
   isUsingCustomFirebaseConfig,
   FirebaseConfigObject,
@@ -318,13 +321,53 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  const [copiedRules, setCopiedRules] = useState(false);
+
+  const handleCopyRules = () => {
+    const rulesText = `rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}`;
+    navigator.clipboard.writeText(rulesText);
+    setCopiedRules(true);
+    setTimeout(() => setCopiedRules(false), 3000);
+  };
+
+  const handleSyncSingleAppointment = async (apt: CustomerAppointment) => {
+    try {
+      const res = await syncAppointmentToFirestore(apt);
+      if (res.success) {
+        apt.firestoreSynced = true;
+        apt.firestoreError = undefined;
+        setAppointments([...getStoredAppointments()]);
+        setFirebaseStatusMsg(`Appointment ${apt.id} successfully synced to Firestore!`);
+        setTimeout(() => setFirebaseStatusMsg(''), 4000);
+      } else {
+        setFirebaseStatusMsg(`Sync error for ${apt.id}: ${res.error || 'Permission Denied'}`);
+      }
+    } catch (err: any) {
+      setFirebaseStatusMsg(`Sync failed: ${err?.message}`);
+    }
+  };
+
   const handleSyncAllToFirebase = async () => {
     setIsSyncingFirebase(true);
     setFirebaseStatusMsg('');
     try {
       const res = await syncAllLocalToFirebase(appointments, careerApps);
-      setFirebaseStatusMsg(`Successfully synced ${res.appointmentsCount} appointments & ${res.careersCount} job applications to Google Firebase Firestore!`);
-      setTimeout(() => setFirebaseStatusMsg(''), 5000);
+      if (res.appointmentsCount > 0 || res.careersCount > 0) {
+        setFirebaseStatusMsg(`Successfully synced ${res.appointmentsCount} appointments & ${res.careersCount} job applications to Google Firebase Firestore!`);
+        setAppointments([...getStoredAppointments()]);
+      } else if (res.lastError) {
+        setFirebaseStatusMsg(`Sync blocked: ${res.lastError}`);
+      } else {
+        setFirebaseStatusMsg('All records already synced or no records to push.');
+      }
+      setTimeout(() => setFirebaseStatusMsg(''), 6000);
     } catch (err: any) {
       setFirebaseStatusMsg(`Firebase sync notice: ${err?.message || 'Check connection'}`);
     } finally {
@@ -758,6 +801,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">
                                     {apt.source}
                                   </span>
+                                )}
+                                {apt.firestoreSynced ? (
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 font-medium border border-emerald-200 inline-flex items-center gap-1">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                    Cloud Synced
+                                  </span>
+                                ) : (
+                                  <button
+                                    onClick={() => handleSyncSingleAppointment(apt)}
+                                    className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 font-medium border border-amber-200 inline-flex items-center gap-1 hover:bg-amber-100 transition-colors"
+                                    title="Click to push this appointment to Firebase"
+                                  >
+                                    <AlertCircle className="w-3 h-3 text-amber-600" />
+                                    Local Only &bull; Sync to Cloud &rarr;
+                                  </button>
                                 )}
                               </div>
 
@@ -1428,6 +1486,116 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <span>{firebaseStatusMsg}</span>
                 </div>
               )}
+
+              {/* Security Rules Fix Guide Card */}
+              <div className="border-2 border-amber-300 bg-amber-50/70 rounded-xl p-5 space-y-3.5 shadow-xs">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-amber-200 text-amber-900 flex items-center justify-center shrink-0 mt-0.5">
+                    <AlertCircle className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-bold text-slate-900 text-sm">
+                        Why is data not showing in your Firestore Database yet?
+                      </h4>
+                      <span className="text-[11px] font-mono font-bold px-2 py-0.5 bg-amber-200 text-amber-950 rounded-md">
+                        403: PERMISSION_DENIED
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-700 mt-1 leading-relaxed">
+                      Your database exists in project <strong className="font-mono text-slate-900">{activeConfig.projectId || 'anuman-92cce'}</strong>, but Google blocks write requests by default until you publish Security Rules. To see inquiries appear live in your Firebase Console, update the rules:
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs pt-1">
+                  <div className="p-3 bg-white rounded-lg border border-amber-200 shadow-2xs space-y-1">
+                    <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                      <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-900 text-[11px] font-black flex items-center justify-center">1</span>
+                      <span>Open Rules Tab</span>
+                    </div>
+                    <p className="text-slate-600 text-[11px]">
+                      Go to Firestore Database &gt; Rules in Firebase Console.
+                    </p>
+                    <div className="pt-1">
+                      <a
+                        href={`https://console.firebase.google.com/project/${activeConfig.projectId || 'anuman-92cce'}/firestore/rules`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-teal-800 hover:text-teal-900 font-bold underline text-[11px]"
+                      >
+                        <span>Open Rules Console</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-white rounded-lg border border-amber-200 shadow-2xs space-y-1">
+                    <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                      <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-900 text-[11px] font-black flex items-center justify-center">2</span>
+                      <span>Paste & Publish</span>
+                    </div>
+                    <p className="text-slate-600 text-[11px]">
+                      Paste the rules below into the editor, then click the blue <strong>"Publish"</strong> button.
+                    </p>
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        onClick={handleCopyRules}
+                        className="inline-flex items-center gap-1 text-teal-800 hover:text-teal-900 font-bold underline text-[11px]"
+                      >
+                        {copiedRules ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                        <span>{copiedRules ? 'Copied to Clipboard!' : 'Copy Rules to Clipboard'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-white rounded-lg border border-amber-200 shadow-2xs space-y-1">
+                    <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                      <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-900 text-[11px] font-black flex items-center justify-center">3</span>
+                      <span>Push Local Data</span>
+                    </div>
+                    <p className="text-slate-600 text-[11px]">
+                      Click <strong>"Push Local Data to this Firebase"</strong> above. All appointments will instantly appear!
+                    </p>
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        onClick={handleSyncAllToFirebase}
+                        disabled={isSyncingFirebase}
+                        className="inline-flex items-center gap-1 text-teal-800 hover:text-teal-900 font-bold underline text-[11px] disabled:opacity-50"
+                      >
+                        <span>Push All Pending Now &rarr;</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Code block */}
+                <div className="relative bg-slate-900 rounded-lg p-3.5 text-slate-100 font-mono text-xs overflow-x-auto shadow-inner">
+                  <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800 text-[11px] text-slate-400">
+                    <span>firestore.rules</span>
+                    <button
+                      type="button"
+                      onClick={handleCopyRules}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-sans font-semibold transition-colors"
+                    >
+                      {copiedRules ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedRules ? 'Copied!' : 'Copy Rules'}</span>
+                    </button>
+                  </div>
+                  <pre className="text-emerald-400 font-mono text-[11px] leading-relaxed select-all">
+{`rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}`}
+                  </pre>
+                </div>
+              </div>
 
               {/* Form to connect another Firebase Account */}
               <div className="border border-slate-200 rounded-xl p-5 bg-slate-50 space-y-4">
